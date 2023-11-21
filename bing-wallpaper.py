@@ -4,10 +4,47 @@ import os
 import subprocess
 from urllib.request import urlopen, Request
 
-FEED_URL = 'https://peapix.com/bing/feed?country='
+
+# Maintainer of this API: https://github.com/TimothyYe/bing-wallpaper
+FEED_URL = 'https://bing.biturl.top/?resolution=3840&mkt=fr-FR&index='
 DEFAULT_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0',
 }
+FALLBACK_DAYS = 7
+WALLPAPERS_DIR = os.path.expanduser('~/.wallpapers')
+
+
+def download_wallpaper(day_index):
+    # Download feed json.
+    with urlopen(Request(f'{FEED_URL}{day_index}', headers=DEFAULT_HEADERS)) as resp:
+        feed = json.load(resp)
+
+    # Download new wallpapers.
+    end_date = feed['end_date']
+    url = feed['url']
+    title = feed['copyright']
+    path = os.path.join(WALLPAPERS_DIR, f'{end_date}.jpg')
+    if os.path.exists(path):
+        print(f'Image already exists: {path}')
+        return title, path
+    try:
+        print(f'Downloading image: {url}')
+        with urlopen(Request(url, headers=DEFAULT_HEADERS)) as resp:
+            data = resp.read()
+    except Exception as e:
+        print(f'Failed to download image for {end_date} with URI: {url}.')
+        raise
+    with open(path, 'wb') as f:
+        f.write(data)
+    return title, path
+
+
+def set_wallpaper(title, path):
+    proc = subprocess.run(['xrandr | grep " connected"'], capture_output=True, shell=True, text=True)
+    monitors = [line.split()[0] for line in proc.stdout.split('\n') if line]
+    for monitor in monitors:
+        prop_name = f'/backdrop/screen0/monitor{monitor}/workspace0/last-image'
+        subprocess.run(['xfconf-query', '-c', 'xfce4-desktop', '-p', prop_name, '-s', path])
 
 
 def main() -> None:
@@ -15,69 +52,41 @@ def main() -> None:
         print('$DISPLAY not set')
         return
 
-    # Load configuration from environment variable
-    # country = os.environ.get('BING_WALLPAPER_COUNTRY', '')
-    # amm UPDATE: just hardcode the country to France.
-    country = 'fr'
-    wallpapers_dir = os.environ.get('BING_WALLPAPER_PATH', os.path.expanduser('~/.wallpapers'))
-
     # Check store directory.
-    os.makedirs(wallpapers_dir, exist_ok=True)
+    os.makedirs(WALLPAPERS_DIR, exist_ok=True)
 
-    # Download feed json.
-    with urlopen(Request(f'{FEED_URL}{country}', headers=DEFAULT_HEADERS)) as resp:
-        feed = json.load(resp)
-
-    # Download new wallpapers.
-    titles = {}
-    for item in feed:
-        titles[item['date']] = item['title']
-        for image in ('imageUrl', 'fullUrl'):
-            path = os.path.join(wallpapers_dir, f'{item["date"]}_{image}.jpg')
-            if os.path.exists(path):
-                continue
-            try:
-                with urlopen(Request(item[image], headers=DEFAULT_HEADERS)) as resp:
-                    data = resp.read()
-            except Exception as e:
-                print(f'Failed to download "{image}" quality for {item["date"]} image with URI: {item[image]}.')
-                print(f'Exception: {e}')
-                continue
-            with open(path, 'wb') as f:
-                f.write(data)
-
-    # Update xfce4-desktop wallpaper configuration.
-    current_date = date.today().isoformat()
-    today_prefix = os.path.join(wallpapers_dir, f'{current_date}')
-    today_wallpaper = None
-    for image in ('_imageUrl', '_fullUrl'):
-        # 'imageUrl' is much higher quality, so prefer it.
-        # Fall back to fullUrl only if necessary.
-        today_wallpaper = today_prefix + image + '.jpg'
-        if not os.path.exists(today_wallpaper):
+    chosen_wallpaper_title = None
+    chosen_wallpaper_path = None
+    # Iterate in reverse chronological order: today=0, yesterday=1, and so on.
+    for day_index in range(FALLBACK_DAYS):
+        try:
+            title, path = download_wallpaper(day_index)
+        except Exception as e:
+            print(f'Exception while downloading wallpaper: {e}')
             continue
-        # We found what we wanted. No need to iterate further.
-        break
-    if not today_wallpaper:
-        return
-    proc = subprocess.run(['xrandr | grep " connected"'], capture_output=True, shell=True, text=True)
-    monitors = [line.split()[0] for line in proc.stdout.split('\n') if line]
-    for monitor in monitors:
-        prop_name = f'/backdrop/screen0/monitor{monitor}/workspace0/last-image'
-        subprocess.run(['xfconf-query', '-c', 'xfce4-desktop', '-p', prop_name, '-s', today_wallpaper])
-    print(f"Successfully set today's wallpaper: {today_wallpaper}")
-    print(f'Title: {titles[current_date]}')
+        if not chosen_wallpaper_title and not chosen_wallpaper_path:
+            # Update xfce4-desktop wallpaper configuration.
+            set_wallpaper(title, path)
+            chosen_wallpaper_title = title
+            chosen_wallpaper_path = path
 
-    # Clean up old files
-    filenames = os.listdir(wallpapers_dir)
+    # Clean up old files.
+    filenames = os.listdir(WALLPAPERS_DIR)
     filenames.sort(reverse=True)
-    # Always keep last 30, no matter how old (that's 15 days because each day
-    # has two files with different image quality.
+    # Always keep last 30, no matter how old.
     filenames_to_delete = filenames[30:]
+    if filenames_to_delete:
+        print()
     for filename in filenames_to_delete:
-        full_path = os.path.join(wallpapers_dir, filename)
+        full_path = os.path.join(WALLPAPERS_DIR, filename)
         print(f'Deleting old file: {full_path}')
         os.remove(full_path)
+
+    # Print summary message.
+    if chosen_wallpaper_path and chosen_wallpaper_title:
+        print()
+        print(f"Successfully set today's wallpaper: {chosen_wallpaper_path}")
+        print(f'Title: {chosen_wallpaper_title}')
 
 
 if __name__ == '__main__':
