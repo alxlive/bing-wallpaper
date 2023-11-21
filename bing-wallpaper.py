@@ -29,7 +29,9 @@ def main() -> None:
         feed = json.load(resp)
 
     # Download new wallpapers.
+    titles = {}
     for item in feed:
+        titles[item['date']] = item['title']
         for image in ('imageUrl', 'fullUrl'):
             path = os.path.join(wallpapers_dir, f'{item["date"]}_{image}.jpg')
             if os.path.exists(path):
@@ -38,13 +40,15 @@ def main() -> None:
                 with urlopen(Request(item[image], headers=DEFAULT_HEADERS)) as resp:
                     data = resp.read()
             except Exception as e:
-                print(f'Failed to download image {item[image]}. Exception: {e}')
+                print(f'Failed to download "{image}" quality for {item["date"]} image with URI: {item[image]}.')
+                print(f'Exception: {e}')
                 continue
             with open(path, 'wb') as f:
                 f.write(data)
 
     # Update xfce4-desktop wallpaper configuration.
-    today_prefix = os.path.join(wallpapers_dir, f'{date.today().isoformat()}')
+    current_date = date.today().isoformat()
+    today_prefix = os.path.join(wallpapers_dir, f'{current_date}')
     today_wallpaper = None
     for image in ('_imageUrl', '_fullUrl'):
         # 'imageUrl' is much higher quality, so prefer it.
@@ -62,6 +66,7 @@ def main() -> None:
         prop_name = f'/backdrop/screen0/monitor{monitor}/workspace0/last-image'
         subprocess.run(['xfconf-query', '-c', 'xfce4-desktop', '-p', prop_name, '-s', today_wallpaper])
     print(f"Successfully set today's wallpaper: {today_wallpaper}")
+    print(f'Title: {titles[current_date]}')
 
     # Clean up old files
     filenames = os.listdir(wallpapers_dir)
