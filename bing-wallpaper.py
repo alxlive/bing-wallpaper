@@ -1,4 +1,5 @@
 from datetime import date
+import lsb_release
 import json
 import os
 import subprocess
@@ -39,12 +40,27 @@ def download_wallpaper(day_index):
     return title, path
 
 
-def set_wallpaper(title, path):
+def set_wallpaper_ubuntu(title, path):
+    # Set dark mode wallpaper
+    proc = subprocess.run([
+        f'gsettings set org.gnome.desktop.background picture-uri-dark file:///{path}'], capture_output=True, shell=True, text=True)
+    # Set normal mode wallpaper
+    proc = subprocess.run([
+        f'gsettings set org.gnome.desktop.background picture-uri file:///{path}'], capture_output=True, shell=True, text=True)
+
+
+def set_wallpaper_xfce(title, path):
     proc = subprocess.run(['xrandr | grep " connected"'], capture_output=True, shell=True, text=True)
     monitors = [line.split()[0] for line in proc.stdout.split('\n') if line]
     for monitor in monitors:
         prop_name = f'/backdrop/screen0/monitor{monitor}/workspace0/last-image'
         subprocess.run(['xfconf-query', '-c', 'xfce4-desktop', '-p', prop_name, '-s', path])
+
+
+def set_wallpaper(title, path):
+    if lsb_release.get_distro_information()['ID'].lower() == 'ubuntu':
+        return set_wallpaper_ubuntu(title, path)
+    return set_wallpaper_xfce(title, path)
 
 
 def main() -> None:
