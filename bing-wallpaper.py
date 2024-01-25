@@ -1,23 +1,40 @@
+#!/usr/local/bin/python3
+
+import ctypes
 from datetime import date
-import lsb_release
+try:
+  import lsb_release
+except:
+  lsb_release = None
 import json
 import os
 import subprocess
+import sys
+
 from urllib.request import urlopen, Request
 
 
 # Maintainer of this API: https://github.com/TimothyYe/bing-wallpaper
 FEED_URL = 'https://bing.biturl.top/?resolution=3840&mkt=fr-FR&index='
 DEFAULT_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0',
+    'User-Agent':
+    'Mozilla/5.0 (X11; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0',
 }
 FALLBACK_DAYS = 7
 WALLPAPERS_DIR = os.path.expanduser('~/.wallpapers')
 
+# Apple Script to set wallpaper.
+SCRIPT = """/usr/bin/osascript<<END
+tell application "Finder"
+set desktop picture to POSIX file "{file_path}"
+end tell
+END"""
+
 
 def download_wallpaper(day_index):
     # Download feed json.
-    with urlopen(Request(f'{FEED_URL}{day_index}', headers=DEFAULT_HEADERS)) as resp:
+    with urlopen(
+            Request(f'{FEED_URL}{day_index}', headers=DEFAULT_HEADERS)) as resp:
         feed = json.load(resp)
 
     # Download new wallpapers.
@@ -32,7 +49,7 @@ def download_wallpaper(day_index):
         print(f'Downloading image: {url}')
         with urlopen(Request(url, headers=DEFAULT_HEADERS)) as resp:
             data = resp.read()
-    except Exception as e:
+    except Exception:
         print(f'Failed to download image for {end_date} with URI: {url}.')
         raise
     with open(path, 'wb') as f:
@@ -40,28 +57,62 @@ def download_wallpaper(day_index):
     return title, path
 
 
+def set_wallpaper_windows(title, path):
+    """
+    WinAPI wallpaper set
+    Documentation is here
+    https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow
+    """
+    print("Setting {} as a wallpaper".format(path))
+    uiAction = 20  # SPI_SETDESKWALLPAPER = 0x0014 or 20 in decimal
+    uiParam = 0
+    pvParam = path
+    fWinIni = 0
+    success = ctypes.windll.user32.SystemParametersInfoW(
+        uiAction, uiParam, pvParam, fWinIni)
+    if success:
+        print('Wallpaper is set.')
+    else:
+        print("Something went wrong. Wallpaper wasn't set")
+
+
+# Set Finder wallpaper
+# See http://stackoverflow.com/questions/431205/how-can-i-programatically-change-the-background-in-mac-os-x
+def set_wallpaper_osx(title, path):
+    subprocess.Popen(SCRIPT.format(file_path=path), shell=True)
+
+
 def set_wallpaper_ubuntu(title, path):
-    # Set dark mode wallpaper
-    proc = subprocess.run([
-        f'gsettings set org.gnome.desktop.background picture-uri-dark file:///{path}'], capture_output=True, shell=True, text=True)
-    # Set normal mode wallpaper
-    proc = subprocess.run([
-        f'gsettings set org.gnome.desktop.background picture-uri file:///{path}'], capture_output=True, shell=True, text=True)
+    attribute = 'set org.gnome.desktop.background'
+    # Set dark mode wallpaper.
+    cmd = f'gsettings {attribute} picture-uri-dark file:///{path}'
+    subprocess.run([cmd], capture_output=True, shell=True, text=True)
+    # Set normal mode wallpaper.
+    cmd = f'gsettings set {attribute} file:///{path}'
+    subprocess.run([cmd], capture_output=True, shell=True, text=True)
 
 
 def set_wallpaper_xfce(title, path):
-    proc = subprocess.run(['xrandr | grep " connected"'], capture_output=True, shell=True, text=True)
+    proc = subprocess.run(['xrandr | grep " connected"'], capture_output=True,
+                          shell=True, text=True)
     monitors = [line.split()[0] for line in proc.stdout.split('\n') if line]
     for monitor in monitors:
         prop_name = f'/backdrop/screen0/monitor{monitor}/workspace0/last-image'
-        subprocess.run(['xfconf-query', '-c', 'xfce4-desktop', '-p', prop_name, '-s', path])
+        subprocess.run(['xfconf-query', '-c', 'xfce4-desktop',
+                        '-p', prop_name, '-s', path])
 
 
 def set_wallpaper(title, path):
-    if lsb_release.get_distro_information()['ID'].lower() == 'ubuntu':
-        return set_wallpaper_ubuntu(title, path)
-    return set_wallpaper_xfce(title, path)
-
+    if sys.platform.startswith('win32'):
+        return set_wallpaper_windows(title, path)
+    elif sys.platform.startswith('darwin'):
+        return set_wallpaper_osx(title, path)
+    elif sys.platform.startswith('linux'):
+        if lsb_release.get_distro_information()['ID'].lower() == 'ubuntu':
+            return set_wallpaper_ubuntu(title, path)
+        else:
+            return set_wallpaper_xfce(title, path)
+    raise ValueError(f'Unsupported platform: {sys.platform}')
 
 def main() -> None:
     if not os.environ.get('DISPLAY', None):
