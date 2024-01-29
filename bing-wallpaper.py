@@ -108,6 +108,8 @@ def set_wallpaper(title, path):
     elif sys.platform.startswith('darwin'):
         return set_wallpaper_osx(title, path)
     elif sys.platform.startswith('linux'):
+        if not os.environ.get('DISPLAY', None):
+            raise ValueError('$DISPLAY not set')
         if lsb_release.get_distro_information()['ID'].lower() == 'ubuntu':
             return set_wallpaper_ubuntu(title, path)
         else:
@@ -115,10 +117,6 @@ def set_wallpaper(title, path):
     raise ValueError(f'Unsupported platform: {sys.platform}')
 
 def main() -> None:
-    if not os.environ.get('DISPLAY', None):
-        print('$DISPLAY not set')
-        return
-
     # Check store directory.
     os.makedirs(WALLPAPERS_DIR, exist_ok=True)
 
