@@ -76,7 +76,6 @@ def set_wallpaper_windows(title, path):
         print("Something went wrong. Wallpaper wasn't set")
 
 
-# Set Finder wallpaper
 # See http://stackoverflow.com/questions/431205/how-can-i-programatically-change-the-background-in-mac-os-x
 def set_wallpaper_osx(title, path):
     subprocess.Popen(SCRIPT.format(file_path=path), shell=True)
@@ -117,7 +116,8 @@ def set_wallpaper(title, path):
     raise ValueError(f'Unsupported platform: {sys.platform}')
 
 def main() -> None:
-    # Check store directory.
+    print(f'Creating directory: {WALLPAPERS_DIR=}')
+    # Check wallpapers directory.
     os.makedirs(WALLPAPERS_DIR, exist_ok=True)
 
     chosen_wallpaper_title = None
