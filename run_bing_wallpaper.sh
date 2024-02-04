@@ -13,4 +13,10 @@ fi
 
 $PYTHON3 bing-wallpaper.py >> logs.txt
 
-tail -1 logs.txt | sed 's/Title: //' > title.txt
+title=`tail -1 logs.txt | sed 's/Title: //'`
+oldtitle=`cat title.txt`
+
+if [ "$title" != "$oldtitle" ] ; then
+    echo "$title" > title.txt
+    echo "overwrote title file"
+fi
