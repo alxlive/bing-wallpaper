@@ -2,12 +2,9 @@
 
 import ctypes
 from datetime import date
-try:
-  import lsb_release
-except:
-  lsb_release = None
 import json
 import os
+import platform
 import subprocess
 import sys
 
@@ -82,12 +79,12 @@ def set_wallpaper_osx(title, path):
 
 
 def set_wallpaper_ubuntu(title, path):
-    attribute = 'set org.gnome.desktop.background'
+    attribute = 'org.gnome.desktop.background'
     # Set dark mode wallpaper.
-    cmd = f'gsettings {attribute} picture-uri-dark file:///{path}'
+    cmd = f'gsettings set {attribute} picture-uri-dark file:///{path}'
     subprocess.run([cmd], capture_output=True, shell=True, text=True)
     # Set normal mode wallpaper.
-    cmd = f'gsettings set {attribute} file:///{path}'
+    cmd = f'gsettings set {attribute} picture-uri file:///{path}'
     subprocess.run([cmd], capture_output=True, shell=True, text=True)
 
 
@@ -109,7 +106,7 @@ def set_wallpaper(title, path):
     elif sys.platform.startswith('linux'):
         if not os.environ.get('DISPLAY', None):
             raise ValueError('$DISPLAY not set')
-        if lsb_release.get_distro_information()['ID'].lower() == 'ubuntu':
+        if platform.freedesktop_os_release().get("NAME").lower() == 'ubuntu':
             return set_wallpaper_ubuntu(title, path)
         else:
             return set_wallpaper_xfce(title, path)
