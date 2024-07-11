@@ -1,9 +1,20 @@
 # Ubuntu
 
+```
 $ cd ~/projects
 $ git clone git@github.com:alxlive/bing-wallpaper.git
 $ crontab -e
 30 * * * * python3 /home/ubuntu/projects/bing-wallpaper/bing-wallpaper.py
+```
+
+# OSX
+
+```
+$ cd ~/projects
+$ git clone git@github.com:alxlive/bing-wallpaper.git
+$ crontab -e
+30 * * * * cd /Users/alxlive/projects/bing-wallpaper && ./run_bing_wallpaper.sh
+```
 
 # Xfce
 
