@@ -1,4 +1,11 @@
-# Xfce Bing-Wallpaper
+# Ubuntu
+
+$ cd ~/projects
+$ git clone git@github.com:alxlive/bing-wallpaper.git
+$ crontab -e
+30 * * * * python3 /home/ubuntu/projects/bing-wallpaper/bing-wallpaper.py
+
+# Xfce
 
 ## Usage
 
