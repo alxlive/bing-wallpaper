@@ -3,8 +3,9 @@
 ```
 $ cd ~/projects
 $ git clone git@github.com:alxlive/bing-wallpaper.git
+$ echo ${USERNAME}
 $ crontab -e
-30 * * * * python3 /home/ubuntu/projects/bing-wallpaper/bing-wallpaper.py
+30 * * * * python3 /home/<REPLACE USERNAME>/projects/bing-wallpaper/bing-wallpaper.py
 ```
 
 # OSX
