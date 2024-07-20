@@ -3,7 +3,7 @@ Description=Bing Today Wallpaper
 
 [Timer]
 OnBootSec=3min
-OnUnitActiveSec=6h
+OnUnitActiveSec=30min
 
 [Install]
 WantedBy=timers.target

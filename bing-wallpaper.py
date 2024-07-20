@@ -79,6 +79,7 @@ def set_wallpaper_osx(title, path):
 
 
 def set_wallpaper_ubuntu(title, path):
+    print(f'Setting Ubuntu wallpaper: {path}')
     attribute = 'org.gnome.desktop.background'
     # Set dark mode wallpaper.
     cmd = f'gsettings set {attribute} picture-uri-dark file:///{path}'
@@ -107,6 +108,7 @@ def set_wallpaper(title, path):
         if not os.environ.get('DISPLAY', None):
             raise ValueError('$DISPLAY not set')
         if platform.freedesktop_os_release().get("NAME").lower() == 'ubuntu':
+            print('Platform is Ubuntu')
             return set_wallpaper_ubuntu(title, path)
         else:
             return set_wallpaper_xfce(title, path)
@@ -128,6 +130,7 @@ def main() -> None:
             continue
         if not chosen_wallpaper_title and not chosen_wallpaper_path:
             # Update xfce4-desktop wallpaper configuration.
+            print(f'Will set wallpaper')
             set_wallpaper(title, path)
             chosen_wallpaper_title = title
             chosen_wallpaper_path = path

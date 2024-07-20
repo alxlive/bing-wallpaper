@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR=/Users/alxlive/projects/bing-wallpaper/
+DIR=/home/alxlive/projects/bing-wallpaper/
 cd $DIR
 echo `date` > logs.txt
 if [ -f /usr/local/bin/python3 ]; then
@@ -11,7 +11,7 @@ else
     PYTHON3=python3
 fi
 
-$PYTHON3 bing-wallpaper.py >> logs.txt
+$PYTHON3 bing-wallpaper.py >> logs.txt 2>&1
 
 title=`tail -1 logs.txt | sed 's/Title: //'`
 oldtitle=`cat title.txt`
